@@ -1,0 +1,52 @@
+#开始调整gammma
+gray_i=[0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240,255]
+#vol_i=[0.2,0.24,0.32,0.44,0.6,0.8,1.04,1.32,1.64,2,2.4,2.84,3.32,3.84,4.4,5,5.6375]
+#lv_i=[1.18,2.971,9.29,21.25,37.8,60.9,88.8,123.5,164,210.4,263.3,322.3,390,466.5,555.9,660.4,747.5]
+#code="0 7 16 2C 4A 6F 9C D0 10B 14E 199 1EB 244 2A5 30D 37C 3F3"
+def lv_target(gray):
+    i=0
+    lv_t=list()
+    while i<len(gray_i):
+         lv_t.append((gray_i[i]/255)**2.2*(lv_i[-1]-lv_i[0])+lv_i[0])
+         i+=1
+    return lv_t
+
+lv_t=lv_target(gray_i)
+
+#计算Gamma
+def cal_voltage(i,lvt):
+    while i< len(lv_i):
+        a=lv_i[i]
+        b=lv_i[i+1]
+        if lvt<=lv_i[i+1]:
+            if lvt>=lv_i[i]:
+                break
+            else:
+                i=i-1
+                #print("-",i,a,b)
+                
+        else:
+            i=i+1
+            #print("+",i,a,b)
+        a=lv_i[i]
+        b=lv_i[i+1]
+    #print(i,vol_i[i+1],vol_i[i],b,a)
+    gray_lv_cal=(vol_i[i+1]-vol_i[i])/(b-a)*lv_t[i]+(b*vol_i[i]-vol_i[i+1]*a)/(b-a)
+    return gray_lv_cal
+
+m=1
+vol_t=cal_voltage(m,lv_i[m])
+#print(gray_i[m],vol_i[m],vol_t,lv_i[m],lv_t[m])
+
+def gamma_cal():
+    n=0
+    vol_t=list()
+    while n< len(lv_i)-1:
+        vol_c=cal_voltage(n,lv_i[n])
+        vol_t.append(vol_c)
+        #print(n,vol_t)
+        n+=1
+    vol_t.append(vol_i[-1])
+    return vol_t
+
+vol_t=gamma_cal()
