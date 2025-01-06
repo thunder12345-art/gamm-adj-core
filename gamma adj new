@@ -1,0 +1,177 @@
+#Gamma adj core
+
+import tkinter as tk
+from tkinter import simpledialog, messagebox
+import time
+
+
+#输入亮度
+
+def get_lv():
+    def resize_dialog():
+        for widget in root.winfo_children():
+            if isinstance(widget, tk.Toplevel):
+                widget.geometry("400x100")  # 设置对话框尺寸
+                break
+    # 创建主窗口
+    root = tk.Tk()
+    root.withdraw()  # 隐藏主窗口
+    root.after(100, resize_dialog)
+
+    # 弹出输入框
+    input = simpledialog.askstring("输入亮度", "例如：0.2,499.3")   
+    if input:
+        try:
+            # 将用户输入的字符串转换为列表
+            user_list = list(map(float, input.split(',')))
+        except ValueError:
+            messagebox.showerror("错误", f"输入数字并英文逗号分隔: {input}")
+    else:
+        messagebox.showerror("错误", f"你没有输入任何内容")
+
+    return user_list
+
+# 调用函数获取用户输入的列表
+lv_i=get_lv()
+#亮度结束
+
+#输入coode
+def hex_to_dec(hex_list):
+    dec_list = []
+    for hex_num in hex_list:
+        try:
+            dec_num = int(hex_num, 16)
+            dec_list.append(dec_num)
+        except ValueError:
+            messagebox.showerror("错误", f"无效的16进制数: {hex_num}")
+            return None
+    return dec_list
+def get_code():
+    def resize_dialog():
+        for widget in root.winfo_children():
+            if isinstance(widget, tk.Toplevel):
+                widget.geometry("400x100")  # 设置对话框尺寸
+                break
+    # 创建主窗口
+    root = tk.Tk()
+    root.withdraw()  # 隐藏主窗口
+    root.after(100, resize_dialog)
+
+    # 弹出输入框
+    # 弹窗输入16进制数字，以空格分隔
+    hex_input = simpledialog.askstring("输入code", "请输入16进制数字（以空格分隔）：")
+    if hex_input is None:
+        return
+
+    hex_list = hex_input.split()
+    dec_list = hex_to_dec(hex_list)
+
+    if dec_list is not None:
+        return dec_list,hex_list
+# 调用函数获取用户输入的列表
+dec_code,hex_code=get_code()
+
+def code2voltage(code):
+    i=0
+    voltage=list()
+    while i<len(code):
+        voltage.append(code[i]*5.5/1023+0.2)
+        i+=1
+    return voltage 
+vol_i=code2voltage(dec_code)
+#code结束
+
+
+#开始调整gammma
+gray_i=[0,16,32,48,64,80,96,112,128,144,160,176,192,208,224,240,255]
+#vol_i=[0.2,0.24,0.32,0.44,0.6,0.8,1.04,1.32,1.64,2,2.4,2.84,3.32,3.84,4.4,5,5.6375]
+#lv_i=[1.18,2.971,9.29,21.25,37.8,60.9,88.8,123.5,164,210.4,263.3,322.3,390,466.5,555.9,660.4,747.5]
+#code="0 7 16 2C 4A 6F 9C D0 10B 14E 199 1EB 244 2A5 30D 37C 3F3"
+def lv_target(gray):
+    i=0
+    lv_t=list()
+    while i<len(gray_i):
+         lv_t.append((gray_i[i]/255)**2.2*(lv_i[-1]-lv_i[0])+lv_i[0])
+         i+=1
+    return lv_t
+
+lv_t=lv_target(gray_i)
+
+#计算Gamma
+def cal_voltage(i,lvt):
+    while i< len(lv_i):
+        a=lv_i[i]
+        b=lv_i[i+1]
+        if lvt<=lv_i[i+1]:
+            if lvt>=lv_i[i]:
+                break
+            else:
+                i=i-1
+                #print("-",i,a,b)
+                
+        else:
+            i=i+1
+            #print("+",i,a,b)
+        a=lv_i[i]
+        b=lv_i[i+1]
+    #print(i,vol_i[i+1],vol_i[i],b,a)
+    gray_lv_cal=(vol_i[i+1]-vol_i[i])/(b-a)*lv_t[i]+(b*vol_i[i]-vol_i[i+1]*a)/(b-a)
+    return gray_lv_cal
+
+m=1
+vol_t=cal_voltage(m,lv_i[m])
+#print(gray_i[m],vol_i[m],vol_t,lv_i[m],lv_t[m])
+
+def gamma_cal():
+    n=0
+    vol_t=list()
+    while n< len(lv_i)-1:
+        vol_c=cal_voltage(n,lv_i[n])
+        vol_t.append(vol_c)
+        #print(n,vol_t)
+        n+=1
+    vol_t.append(vol_i[-1])
+    return vol_t
+
+vol_t=gamma_cal()
+
+def voltage2code(voltage):
+    i=0
+    code=list()
+    while i<len(voltage):
+        code.append(round((voltage[i]-0.2)*1023/5.5))
+        i+=1
+    return code 
+code_o=voltage2code(vol_t)
+
+
+
+#print(lv_t)
+
+def dex_to_hex(dec_list):
+    hex_list = []
+    for dec_num in dec_list:
+        try:
+            hex_num = hex(dec_num)
+            hex_list.append(hex_num)
+        except ValueError:
+            messagebox.showerror("错误", f"无效的10进制数: {dec_num}")
+            return None
+    return hex_list
+
+code_out=dex_to_hex(code_o)
+
+file = open("BOE gamma adj code.txt", "w")
+
+
+
+file.write("输入的亮度：" )
+file.write(str(lv_i))
+file.write("\n" )
+
+file.write("输入的代码：" )
+file.write(str(hex_code))
+file.write("\n" )
+file.write("输出调整后的代码：" )
+file.write(str(code_out))
+file.write("\n" )
